@@ -1,5 +1,5 @@
 /*
- * Author: cyril0allen@gmail.com
+ * Author: Tony Allen (cyril0allen@gmail.com)
  */
 
 #include <iostream>
