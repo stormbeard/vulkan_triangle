@@ -27,7 +27,7 @@ static constexpr int kHeight = 600;
 class HelloTriangle {
  public:
   HelloTriangle();
-  ~HelloTriangle() = default;
+  ~HelloTriangle();
 
   // Do the actual work.
   void run();
@@ -66,7 +66,15 @@ HelloTriangle::HelloTriangle() {
 
 //-----------------------------------------------------------------------------
 
+HelloTriangle::~HelloTriangle() {
+  cleanup();
+}
+
+//-----------------------------------------------------------------------------
+
 void HelloTriangle::initWindow() {
+  LOG(INFO) << "Initializing window";
+
   glfwInit();
 
   // GLFW was originally designed to create an OpenGL context, so tell it not
@@ -161,6 +169,10 @@ void HelloTriangle::mainLoop() {
 //-----------------------------------------------------------------------------
 
 void HelloTriangle::cleanup() {
+  LOG(INFO) << "Cleaning up";
+
+  vkDestroyInstance(instance, nullptr /* allocator callback */);
+
   glfwDestroyWindow(window);
 
   glfwTerminate();
@@ -174,8 +186,6 @@ void HelloTriangle::run() {
   initVulkan();
 
   mainLoop();
-
-  cleanup();
 }
 
 //-----------------------------------------------------------------------------
