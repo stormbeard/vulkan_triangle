@@ -22,7 +22,7 @@ static constexpr int kWidth = 800;
 
 static constexpr int kHeight = 600;
 
-const std::vector<std::string> validationLayers =
+const std::vector<const char *> validationLayers =
   { "VK_LAYER_LUNARG_standard_validation" };
 
 // Only enable validation layers if we're in a debug build.
@@ -134,6 +134,13 @@ void HelloTriangle::createInstance() {
   createInfo.enabledExtensionCount = glfwExtensionCount;
   createInfo.ppEnabledExtensionNames = glfwExtensions;
   createInfo.enabledLayerCount = 0;
+  if (enableValidationLayers) {
+    createInfo.enabledLayerCount =
+      static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+  } else {
+    createInfo.enabledLayerCount = 0;
+  }
 
   LOG(INFO) << "Creating VkInstance";
   VkResult result = vkCreateInstance(&createInfo,
@@ -216,7 +223,7 @@ bool HelloTriangle::checkValidationLayerSupport() {
     bool layerFound = false;
     for (const auto& layerProperties : availableLayers) {
       LOG(INFO) << "Verifying validation layer: " << layerProperties.layerName;
-      if (strcmp(layerName.c_str(), layerProperties.layerName) == 0) {
+      if (strcmp(layerName, layerProperties.layerName) == 0) {
         layerFound = true;
         break;
       }
