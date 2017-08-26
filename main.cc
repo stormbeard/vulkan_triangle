@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <functional>
 
+#include "glog/logging.h"
+
 // This automatically loads the Vulkan header as opposed to doing something
 // like "#include <vulkan/vulkan.h>" which only works for off-screen rendering.
 #define GLFW_INCLUDE_VULKAN
@@ -34,6 +36,9 @@ class HelloTriangle {
   // Initilizes the Vulkan objects.
   void initVulkan();
 
+  // Create the VkInstance.
+  void createInstance();
+
   // Starts the rendering of frames.
   void mainLoop();
 
@@ -41,7 +46,11 @@ class HelloTriangle {
   void cleanup();
 
  private:
+  // Pointer to the window object we'll create.
   GLFWwindow *window;
+
+  // The connection between this application and the Vulkan library.
+  VkInstance instance;
 };
 
 //-----------------------------------------------------------------------------
@@ -67,7 +76,37 @@ void HelloTriangle::initWindow() {
 //-----------------------------------------------------------------------------
 
 void HelloTriangle::initVulkan() {
+  createInstance();
+}
 
+//-----------------------------------------------------------------------------
+void HelloTriangle::createInstance() {
+  // Give some information about this application.
+  VkApplicationInfo appInfo;
+  appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  appInfo.pApplicationName = "Hello Triangle";
+  appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+  appInfo.pEngineName = "No Engine";
+  appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+  appInfo.apiVersion = VK_API_VERSION_1_0;
+
+  const char **glfwExtensions;
+  unsigned int glfwExtensionCount = 0;
+  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+  // Tell the Vulkan driver which global extentions and validation layers we
+  // want to use. This applies to the entire program and not a specific device.
+  VkInstanceCreateInfo createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  createInfo.pApplicationInfo = &appInfo;
+  createInfo.enabledExtensionCount = glfwExtensionCount;
+  createInfo.ppEnabledExtensionNames = glfwExtensions;
+  createInfo.enabledLayerCount = 0;
+
+  VkResult result = vkCreateInstance(&createInfo,
+                                     nullptr /* custom allocator callback */,
+                                     &instance);
+  CHECK(!result);
 }
 
 //-----------------------------------------------------------------------------
@@ -103,12 +142,7 @@ void HelloTriangle::run() {
 int main() {
   HelloTriangle app;
 
-  try {
-    app.run();
-  } catch (const std::runtime_error& e) {
-    std::cerr << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
+  app.run();
 
   return EXIT_SUCCESS;
 }
