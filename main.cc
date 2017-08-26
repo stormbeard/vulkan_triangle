@@ -22,6 +22,16 @@ static constexpr int kWidth = 800;
 
 static constexpr int kHeight = 600;
 
+const std::vector<std::string> validationLayers =
+  { "VK_LAYER_LUNARG_standard_validation" };
+
+// Only enable validation layers if we're in a debug build.
+#if NDEBUG
+  static constexpr bool enableValidationLayers = false;
+#else
+  static constexpr bool enableValidationLayers = true;
+#endif
+
 //-----------------------------------------------------------------------------
 
 class HelloTriangle {
@@ -50,6 +60,9 @@ class HelloTriangle {
 
   // Deallocates resources used.
   void cleanup();
+
+  // Check if all the requested validation layers are available.
+  bool checkValidationLayerSupport();
 
  private:
   // Pointer to the window object we'll create.
@@ -97,6 +110,8 @@ void HelloTriangle::initVulkan() {
 
 //-----------------------------------------------------------------------------
 void HelloTriangle::createInstance() {
+  CHECK(!enableValidationLayers || checkValidationLayerSupport());
+
   // Give some information about this application.
   VkApplicationInfo appInfo;
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -186,6 +201,33 @@ void HelloTriangle::run() {
   initVulkan();
 
   mainLoop();
+}
+
+//-----------------------------------------------------------------------------
+
+bool HelloTriangle::checkValidationLayerSupport() {
+  uint32_t layerCount;
+  vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+  std::vector<VkLayerProperties> availableLayers(layerCount);
+  vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+  for (const auto& layerName : validationLayers) {
+    bool layerFound = false;
+    for (const auto& layerProperties : availableLayers) {
+      LOG(INFO) << "Verifying validation layer: " << layerProperties.layerName;
+      if (strcmp(layerName.c_str(), layerProperties.layerName) == 0) {
+        layerFound = true;
+        break;
+      }
+    }
+
+    if (!layerFound) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 //-----------------------------------------------------------------------------
