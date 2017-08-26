@@ -2,9 +2,12 @@
  * Author: Tony Allen (cyril0allen@gmail.com)
  */
 
+#include <functional>
 #include <iostream>
 #include <stdexcept>
-#include <functional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 #include "glog/logging.h"
 
@@ -38,6 +41,9 @@ class HelloTriangle {
 
   // Create the VkInstance.
   void createInstance();
+
+  // Check if provided extensions are all supported.
+  void verifyExtensions(const std::vector<VkExtensionProperties> extensions);
 
   // Starts the rendering of frames.
   void mainLoop();
@@ -76,7 +82,9 @@ void HelloTriangle::initWindow() {
 //-----------------------------------------------------------------------------
 
 void HelloTriangle::initVulkan() {
+  LOG(INFO) << "Initializing Vulkan";
   createInstance();
+
 }
 
 //-----------------------------------------------------------------------------
@@ -90,9 +98,10 @@ void HelloTriangle::createInstance() {
   appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.apiVersion = VK_API_VERSION_1_0;
 
-  const char **glfwExtensions;
   unsigned int glfwExtensionCount = 0;
-  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+  const char **glfwExtensions =
+    glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+  PCHECK(glfwExtensions) << "Unable to get GLFW extensions";
 
   // Tell the Vulkan driver which global extentions and validation layers we
   // want to use. This applies to the entire program and not a specific device.
@@ -103,10 +112,42 @@ void HelloTriangle::createInstance() {
   createInfo.ppEnabledExtensionNames = glfwExtensions;
   createInfo.enabledLayerCount = 0;
 
+  LOG(INFO) << "Creating VkInstance";
   VkResult result = vkCreateInstance(&createInfo,
                                      nullptr /* custom allocator callback */,
                                      &instance);
-  CHECK(!result);
+  CHECK(!result) << "Could not create VkInstance";
+
+  // Find out how many extensions there are.
+  uint32_t extensionCount = 0;
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+  // Query the extension details.
+  LOG(INFO) << "Querying Vulkan extensions";
+  std::vector<VkExtensionProperties> extensions;
+  vkEnumerateInstanceExtensionProperties(
+    nullptr, &extensionCount, extensions.data());
+  if (!extensions.empty()) {
+    std::unordered_set<std::string> supported_extension_names;
+    for (const auto& extension : extensions) {
+      LOG(INFO) << "Available Vulkan extension: " << extension.extensionName;
+      supported_extension_names.emplace(extension.extensionName);
+    }
+  }
+
+  // Verify the GLFW extensions are supported.
+  const std::vector<std::string> glfwExtensionVec(
+      glfwExtensions, glfwExtensions + glfwExtensionCount);
+  for (const auto& ex : glfwExtensionVec) {
+    LOG(WARNING) << "Unsupported GLFW extension: " << ex;
+  }
+}
+
+//-----------------------------------------------------------------------------
+
+void HelloTriangle::verifyExtensions(
+  const std::vector<VkExtensionProperties> extensions) {
+
 }
 
 //-----------------------------------------------------------------------------
