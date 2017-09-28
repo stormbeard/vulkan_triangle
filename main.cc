@@ -64,6 +64,10 @@ class HelloTriangle {
   // Check if all the requested validation layers are available.
   bool checkValidationLayerSupport();
 
+  // Returns the required list of extentions based on whether the validation
+  // layers are enabled or not.
+  std::vector<const char *> getRequiredExtensions();
+
  private:
   // Pointer to the window object we'll create.
   GLFWwindow *window;
@@ -121,18 +125,15 @@ void HelloTriangle::createInstance() {
   appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.apiVersion = VK_API_VERSION_1_0;
 
-  unsigned int glfwExtensionCount = 0;
-  const char **glfwExtensions =
-    glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-  PCHECK(glfwExtensions) << "Unable to get GLFW extensions";
 
   // Tell the Vulkan driver which global extentions and validation layers we
   // want to use. This applies to the entire program and not a specific device.
+  std::vector<const char *> extensions = getRequiredExtensions();
   VkInstanceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
-  createInfo.enabledExtensionCount = glfwExtensionCount;
-  createInfo.ppEnabledExtensionNames = glfwExtensions;
+  createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+  createInfo.ppEnabledExtensionNames = extensions.data();
   createInfo.enabledLayerCount = 0;
   if (enableValidationLayers) {
     createInfo.enabledLayerCount =
@@ -154,22 +155,15 @@ void HelloTriangle::createInstance() {
 
   // Query the extension details.
   LOG(INFO) << "Querying Vulkan extensions";
-  std::vector<VkExtensionProperties> extensions;
+  std::vector<VkExtensionProperties> extension_details;
   vkEnumerateInstanceExtensionProperties(
-    nullptr, &extensionCount, extensions.data());
-  if (!extensions.empty()) {
+    nullptr, &extensionCount, extension_details.data());
+  if (!extension_details.empty()) {
     std::unordered_set<std::string> supported_extension_names;
-    for (const auto& extension : extensions) {
+    for (const auto& extension : extension_details) {
       LOG(INFO) << "Available Vulkan extension: " << extension.extensionName;
       supported_extension_names.emplace(extension.extensionName);
     }
-  }
-
-  // Verify the GLFW extensions are supported.
-  const std::vector<std::string> glfwExtensionVec(
-      glfwExtensions, glfwExtensions + glfwExtensionCount);
-  for (const auto& ex : glfwExtensionVec) {
-    LOG(WARNING) << "Unsupported GLFW extension: " << ex;
   }
 }
 
@@ -219,6 +213,7 @@ bool HelloTriangle::checkValidationLayerSupport() {
   std::vector<VkLayerProperties> availableLayers(layerCount);
   vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
+  // Verify that all of the layers being requested available.
   for (const auto& layerName : validationLayers) {
     bool layerFound = false;
     for (const auto& layerProperties : availableLayers) {
@@ -235,6 +230,33 @@ bool HelloTriangle::checkValidationLayerSupport() {
   }
 
   return true;
+}
+
+//-----------------------------------------------------------------------------
+
+std::vector<const char *> HelloTriangle::getRequiredExtensions() {
+  std::vector<const char *> extensions;
+
+  const char **glfwExtensions;
+  unsigned int glfwExtensionCount = 0;
+  glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+  for (int ii = 0; ii < glfwExtensionCount; ++ii) {
+    extensions.emplace_back(glfwExtensions[ii]);
+  }
+
+  if (enableValidationLayers) {
+    extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+  }
+
+  // Verify the GLFW extensions are supported.
+  const std::vector<std::string> glfwExtensionVec(
+      glfwExtensions, glfwExtensions + glfwExtensionCount);
+  for (const auto& ex : glfwExtensionVec) {
+    LOG(WARNING) << "Unsupported GLFW extension: " << ex;
+  }
+
+  return extensions;
 }
 
 //-----------------------------------------------------------------------------
